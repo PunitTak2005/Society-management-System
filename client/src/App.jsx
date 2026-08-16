@@ -14,7 +14,7 @@ function App() {
   const [countdown, setCountdown] = useState(60);
 
   useEffect(() => {
-    const socketInstance = io('http://localhost:3000');
+    const socketInstance = io('/');
     setSocket(socketInstance);
 
     socketInstance.on('connect', () => {

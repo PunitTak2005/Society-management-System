@@ -78,7 +78,7 @@ function Visitors() {
     loadVisitorLogs();
 
     // Setup socket to listen to real-time approvals inside this page (Guards)
-    const socket = io('http://localhost:3000');
+    const socket = io('/');
     socket.on('connect', () => {
       console.log('🔌 Visitors page socket registered');
     });
