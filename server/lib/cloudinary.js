@@ -33,7 +33,7 @@ export const uploadToCloudinary = (fileBuffer, originalName) => {
         fs.writeFileSync(filePath, fileBuffer);
         
         // Return local relative URL
-        resolve(`http://localhost:3000/public/uploads/${fileName}`);
+        resolve(`${process.env.CLIENT_URL}/public/uploads/${fileName}`);
         return;
       } catch (err) {
         reject(new Error(`Local fallback upload failed: ${err.message}`));
