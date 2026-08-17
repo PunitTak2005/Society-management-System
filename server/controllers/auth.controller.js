@@ -134,7 +134,7 @@ export const login = async (req, res) => {
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).populate('role');
 
     console.log(user); //otp : '32232' , /otpExpires :
 
@@ -157,7 +157,7 @@ export const verifyOtp = async (req, res) => {
       httpOnly: true,
       sameSite: 'lax',
       secure: false,
-      maxAge: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
     res.status(200).json({
