@@ -126,7 +126,7 @@ export const updateProfilePhoto = async (req, res) => {
       return res.status(400).json({ message: 'Please select a profile photo to upload.' });
     }
 
-    // Stream directly to Amazon S3 using EC2 IAM Role credentials
+    // Stream directly to Amazon S3 using EC2 IAM Role credentials / .env keys
     const photoUrl = await uploadToS3(req.file.buffer, req.file.originalname, req.file.mimetype);
 
     const user = await User.findByIdAndUpdate(
@@ -145,6 +145,8 @@ export const updateProfilePhoto = async (req, res) => {
       data: user,
     });
   } catch (error) {
+    // Added explicit server-side error logging to catch S3/Database issues in PM2 logs
+    console.error("🔴 DETAILED PROFILE PHOTO UPLOAD CRASH:", error);
     res.status(500).json({ error: error.message });
   }
 };

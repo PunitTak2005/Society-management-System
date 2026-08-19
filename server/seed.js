@@ -16,7 +16,7 @@ const seedAdminUser = async () => {
   try {
     await connectDb();
 
-    const myRealEmail = 'your_email@gmail.com';
+    const myRealEmail = 'punittak2005@gmail.com';
     const myName = 'Admin User';
 
     let adminRole = await Role.findOne({ role: 'admin' });
