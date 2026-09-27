@@ -78,7 +78,7 @@ function Visitors() {
     loadVisitorLogs();
 
     // Setup socket to listen to real-time approvals inside this page (Guards)
-    const socket = io('/');
+    const socket = io('https://www.punitdevops.shop', { path: '/socket.io', transports: ['websocket'], secure: true });
     socket.on('connect', () => {
       console.log('🔌 Visitors page socket registered');
     });

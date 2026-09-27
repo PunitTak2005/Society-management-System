@@ -14,7 +14,7 @@ function App() {
   const [countdown, setCountdown] = useState(60);
 
   useEffect(() => {
-    const socketInstance = io('/');
+    const socketInstance = io('https://www.punitdevops.shop', { path: '/socket.io', transports: ['websocket'], secure: true });
     setSocket(socketInstance);
 
     socketInstance.on('connect', () => {
