@@ -1,5 +1,5 @@
 # Use Node.js LTS image
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Set working directory
 WORKDIR /app
@@ -8,13 +8,13 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install --production
+RUN npm install --omit=dev
 
 # Copy source code
 COPY . .
 
 # Expose backend application port
-EXPOSE 5000
+EXPOSE 9007
 
 # Start backend application
 CMD ["npm", "start"]
