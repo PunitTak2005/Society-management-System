@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { login, verifyOtp } from '../redux/slice/authSlice';
+import React, { useState, useEffect } from 'react';
+import { login, verifyOtp, resendOtp } from '../redux/slice/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -15,6 +15,29 @@ const Login = () => {
   const [otpStep, setOtpStep] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [localMessage, setLocalMessage] = useState(null);
+  const [timer, setTimer] = useState(600); // 10 minutes default
+  const [isResending, setIsResending] = useState(false);
+
+  // Countdown timer for OTP
+  useEffect(() => {
+    let interval = null;
+    if (otpStep && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else if (!otpStep) {
+      setTimer(600);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [otpStep, timer]);
+
+  const formatTimer = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -31,7 +54,9 @@ const Login = () => {
     dispatch(login({ formData }))
       .unwrap()
       .then((res) => {
-        setLocalMessage(res.message || 'OTP sent to your registered email!');
+        const expiryMinutes = res.expiryMinutes || 10;
+        setTimer(expiryMinutes * 60);
+        setLocalMessage(res.message || `OTP sent to your registered email! Valid for ${expiryMinutes} minutes.`);
         setOtpStep(true);
       })
       .catch((err) => {
@@ -39,10 +64,34 @@ const Login = () => {
       });
   };
 
+  const handleResendOtp = async () => {
+    if (isResending) return;
+    setIsResending(true);
+    setLocalError(null);
+    setLocalMessage(null);
+
+    try {
+      const res = await dispatch(resendOtp({ email: formData.email })).unwrap();
+      const expiryMinutes = res.expiryMinutes || 10;
+      setTimer(expiryMinutes * 60);
+      setOtp('');
+      setLocalMessage(res.message || `A new OTP has been sent to your email (valid for ${expiryMinutes} minutes).`);
+    } catch (err) {
+      setLocalError(err?.message || 'Failed to resend OTP. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setLocalError(null);
     setLocalMessage(null);
+
+    if (timer <= 0) {
+      setLocalError('OTP has expired. Please request a new one by clicking Resend OTP.');
+      return;
+    }
 
     dispatch(verifyOtp({ email: formData.email, otp }))
       .unwrap()
@@ -369,9 +418,36 @@ const Login = () => {
               )}
 
               <div>
-                <label className="overline-label block mb-2" htmlFor="otp">
-                  One-Time Password
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="overline-label" htmlFor="otp">
+                    One-Time Password
+                  </label>
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                      timer > 60
+                        ? 'bg-slate-100 text-slate-700'
+                        : timer > 0
+                        ? 'bg-amber-100 text-amber-800 animate-pulse'
+                        : 'bg-danger/10 text-danger font-bold'
+                    }`}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    {timer > 0 ? `Expires in ${formatTimer(timer)}` : 'OTP Expired'}
+                  </span>
+                </div>
                 <input
                   id="otp"
                   name="otp"
@@ -379,18 +455,39 @@ const Login = () => {
                   required
                   maxLength={6}
                   inputMode="numeric"
-                  className="has-icon text-center tracking-[0.5em] text-lg font-semibold"
+                  disabled={timer <= 0}
+                  className="has-icon text-center tracking-[0.5em] text-lg font-semibold disabled:bg-slate-100 disabled:cursor-not-allowed"
                   placeholder="------"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                 />
               </div>
 
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>Didn't receive the code?</span>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={isResending}
+                  className="font-semibold text-primary-600 hover:text-primary-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  {isResending ? (
+                    <>
+                      <span className="inline-block w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></span>
+                      Resending...
+                    </>
+                  ) : (
+                    'Resend OTP'
+                  )}
+                </button>
+              </div>
+
               <button
                 type="submit"
-                className="btn w-full bg-primary-600 hover:bg-primary-700 text-white py-3 transition-all duration-200 shadow-lg shadow-primary-600/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={loading || timer <= 0 || otp.length < 6}
+                className="btn w-full bg-primary-600 hover:bg-primary-700 text-white py-3 transition-all duration-200 shadow-lg shadow-primary-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Verifying OTP...' : 'Verify OTP'}
+                {loading ? 'Verifying OTP...' : timer <= 0 ? 'OTP Expired – Click Resend' : 'Verify OTP'}
               </button>
 
               <button
@@ -411,12 +508,12 @@ const Login = () => {
           <div className="mt-12 pt-8 border-t border-slate-100 text-center">
             <p className="ds-subtle text-sm">
               New to the society?{' '}
-              <a
-                href="#"
+              <Link
+                to="/signup"
                 className="font-bold text-primary-600 hover:underline"
               >
                 Request Access
-              </a>
+              </Link>
             </p>
           </div>
         </div>

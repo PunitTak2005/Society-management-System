@@ -28,6 +28,11 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'inactive'],
+    default: 'pending',
+  },
   profilePhoto: {
     type: String,
   },
@@ -35,12 +40,15 @@ const UserSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Flat',
   },
-  otp : {
-    type : String ,
+  otp: {
+    type: String,
   },
-  otpExpiresIn : {
-    type : Date
-  }
+  otpExpiresAt: {
+    type: Date,
+  },
+  otpExpiresIn: {
+    type: Date,
+  },
 }, { timestamps: true });
 
 const User = mongoose.model('User', UserSchema);

@@ -9,8 +9,14 @@ import {
 } from './ui';
 import { UserPlus, Search, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 
+import Cookies from 'js-cookie';
+import { ShieldAlert } from 'lucide-react';
+
 function ManageUsers() {
   const dispatch = useDispatch();
+  const userRole = useSelector((state) => state.auth.role) || Cookies.get('role');
+  const isAdmin = userRole?.toLowerCase() === 'admin';
+
   const { users, loading, error, message } = useSelector((state) => state.user);
   const { roles } = useSelector((state) => state.role);
   const { flats } = useSelector((state) => state.flat);
@@ -26,10 +32,12 @@ function ManageUsers() {
   });
 
   useEffect(() => {
-    dispatch(fetchUsers());
-    dispatch(fetchRoles());
-    dispatch(fetchAvailableFlats());
-  }, [dispatch]);
+    if (isAdmin) {
+      dispatch(fetchUsers());
+      dispatch(fetchRoles());
+      dispatch(fetchAvailableFlats());
+    }
+  }, [dispatch, isAdmin]);
 
   const handleOpenDialog = (user = null) => {
     if (user) {
@@ -74,6 +82,20 @@ function ManageUsers() {
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (!isAdmin) {
+    return (
+      <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center max-w-lg mx-auto mt-12 space-y-4 shadow-sm">
+        <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+          <ShieldAlert size={24} />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
+        <p className="text-slate-500 text-sm">
+          You do not have permission to view or manage society user accounts. Please contact an administrator if you believe this is an error.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

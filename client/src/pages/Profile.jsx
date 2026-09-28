@@ -11,7 +11,7 @@ import { Badge } from '../component/ui';
 
 function Profile() {
   const dispatch = useDispatch();
-  const { name, email, profilePhoto, role, loading } = useSelector((state) => state.auth);
+  const { id: authUserId, name, email, profilePhoto, role, loading } = useSelector((state) => state.auth);
   
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -35,19 +35,22 @@ function Profile() {
   const fetchProfileDetails = async () => {
     try {
       setLoadingProfile(true);
-      const userId = Cookies.get('id');
-      if (!userId) return;
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/users/${userId}`, {
+      const userId = authUserId || Cookies.get('id');
+      const targetUrl = userId
+        ? `${import.meta.env.VITE_API_URL}/users/${userId}`
+        : `${import.meta.env.VITE_API_URL}/profile`;
+
+      const res = await axios.get(targetUrl, {
         withCredentials: true
       });
       setProfileData(res.data.data);
       resetProfile({
-        name: res.data.data.name || '',
-        email: res.data.data.email || '',
-        phone: res.data.data.phone || ''
+        name: res.data.data?.name || '',
+        email: res.data.data?.email || '',
+        phone: res.data.data?.phone || ''
       });
     } catch (err) {
-      toast.error('Failed to load profile details');
+      toast.error(err.response?.data?.message || 'Failed to load profile details');
     } finally {
       setLoadingProfile(false);
     }
@@ -55,7 +58,7 @@ function Profile() {
 
   useEffect(() => {
     fetchProfileDetails();
-  }, []);
+  }, [authUserId]);
 
   const onSubmitProfile = (data) => {
     dispatch(updateSelfProfileThunk(data)).then((res) => {
@@ -132,7 +135,7 @@ function Profile() {
               />
 
               <div className="flex justify-end pt-2">
-                <Button type="submit" loading={loading}>Save Profile Changes</Button>
+                <Button type="submit" isLoading={loading}>Save Profile Changes</Button>
               </div>
             </form>
           </div>
@@ -176,7 +179,7 @@ function Profile() {
               </div>
 
               <div className="flex justify-end pt-2">
-                <Button type="submit" loading={changingPassword}>Update Password</Button>
+                <Button type="submit" isLoading={changingPassword}>Update Password</Button>
               </div>
             </form>
           </div>

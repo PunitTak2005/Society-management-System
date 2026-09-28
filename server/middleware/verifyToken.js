@@ -11,7 +11,12 @@ console.log(req.cookies)
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_STRING);
+    const secret = process.env.JWT_SECRET || process.env.JWT_SECRET_STRING;
+    if (!secret) {
+      throw new Error('JWT Secret is not configured in environment variables.');
+    }
+
+    const decoded = jwt.verify(token, secret);
 
     if (!decoded) {
       return res.status(401).json({

@@ -150,7 +150,7 @@ Create a `.env` file in the `server/` directory with the following variables:
 MONGODB_URI=mongodb://localhost:27017/society-management
 
 # Server Configuration
-PORT=3000
+PORT=9007
 NODE_ENV=development
 
 # JWT Configuration
@@ -175,7 +175,10 @@ AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 
 # Client Configuration
-CLIENT_URL=http://localhost:5173
+CLIENT_URL=http://localhost:3258
+
+# Server public URL (used in email links)
+SERVER_URL=http://localhost:9007
 ```
 
 ### Client Environment Variables
@@ -184,7 +187,7 @@ Create a `.env` file in the `client/` directory with the following variables:
 
 ```env
 # API Configuration
-VITE_API_URL=http://localhost:3000/api
+VITE_API_URL=http://localhost:9007/api
 ```
 
 ### Environment Variables Guide
@@ -231,7 +234,7 @@ cd server
 npm run dev
 ```
 
-The server will start on `http://localhost:3000` and watch for changes.
+The server will start on `http://localhost:9007` and watch for changes.
 
 #### Start the Frontend Development Server
 
@@ -242,13 +245,13 @@ cd client
 npm run dev
 ```
 
-The frontend will start on `http://localhost:5173`.
+The frontend will start on `http://localhost:3258`.
 
 #### Access the Application
 
 Open your browser and navigate to:
 ```
-http://localhost:5173
+http://localhost:3258
 ```
 
 ### Production Build
@@ -294,7 +297,7 @@ npm run seed:flat     # Seed flat data
 
 ### API Endpoints
 
-The backend API runs on `http://localhost:3000/api` with the following main routes:
+The backend API runs on `http://localhost:9007/api` with the following main routes:
 
 - `/api/auth/` - Authentication endpoints
 - `/api/users/` - User management
@@ -328,7 +331,7 @@ The system uses the following main data models:
 
 ### Port Already in Use
 
-If port 3000 (backend) or 5173 (frontend) is already in use:
+If port 9007 (backend) or 3258 (frontend) is already in use:
 
 ```bash
 # Change the backend port

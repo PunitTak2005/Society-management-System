@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { fetchFlats } from '../redux/slice/flatSlice';
-import { io } from 'socket.io-client';
+import socket from '../lib/socket';
 
 function Visitors() {
   const dispatch = useDispatch();
@@ -60,14 +60,22 @@ function Visitors() {
     reset: resetVerify 
   } = useForm();
 
+  const [errorMessage, setErrorMessage] = useState(null);
+
   // Load flats and logs
   const loadVisitorLogs = async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/visitors`, { withCredentials: true });
-      setVisitors(res.data.data);
+      setVisitors(res.data.data || []);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load visitors:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to load visitor records';
+      setErrorMessage(msg);
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -78,9 +86,9 @@ function Visitors() {
     loadVisitorLogs();
 
     // Setup socket to listen to real-time approvals inside this page (Guards)
-    const socket = io('https://www.punitdevops.shop', { path: '/socket.io', transports: ['websocket'], upgrade: false, secure: true });
+    // The socket is already connected from App.jsx — just add the page-level listener here.
     socket.on('connect', () => {
-      console.log('🔌 Visitors page socket registered');
+      console.log('🔌 Visitors page socket registered:', socket.id);
     });
 
     socket.on('visitor_status_updated', (data) => {
@@ -107,7 +115,9 @@ function Visitors() {
     });
 
     return () => {
-      socket.disconnect();
+      // Remove only the listeners added here; leave the socket connected for other pages
+      socket.off('connect');
+      socket.off('visitor_status_updated');
     };
   }, [dispatch]);
 
@@ -273,7 +283,7 @@ function Visitors() {
                 />
               </div>
 
-              <Button type="submit" className="w-full flex justify-center py-2.5 mt-2" loading={loading}>
+              <Button type="submit" className="w-full flex justify-center py-2.5 mt-2" isLoading={loading}>
                 Generate Invite Link
               </Button>
             </form>
@@ -411,7 +421,7 @@ function Visitors() {
                   className="text-center font-mono text-xl tracking-widest py-3 border border-slate-200"
                   {...registerVerify('passcode', { required: true, minLength: 6, maxLength: 6 })}
                 />
-                <Button type="submit" className="w-full py-3 font-semibold text-sm flex justify-center gap-2" loading={loading}>
+                <Button type="submit" className="w-full py-3 font-semibold text-sm flex justify-center gap-2" isLoading={loading}>
                   Verify & Approve Entry
                   <ArrowRight size={16} />
                 </Button>
@@ -482,7 +492,7 @@ function Visitors() {
                   {...registerWalkin('purpose')}
                 />
 
-                <Button type="submit" className="w-full py-2.5 flex justify-center" loading={loading}>
+                <Button type="submit" className="w-full py-2.5 flex justify-center" isLoading={loading}>
                   Submit Approval Request
                 </Button>
               </form>

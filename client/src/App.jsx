@@ -1,40 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import AppRoutes from './routes/AppRoutes';
 import Cookies from 'js-cookie';
-import { io } from 'socket.io-client';
+import socket from './lib/socket';
 import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
 import { Shield, Clock, Check, X } from 'lucide-react';
 
 function App() {
-  const [socket, setSocket] = useState(null);
-  
   // Real-time visitor approval request states
   const [visitorRequest, setVisitorRequest] = useState(null);
   const [countdown, setCountdown] = useState(60);
 
   useEffect(() => {
-    const socketInstance = io('https://www.punitdevops.shop', { path: '/socket.io', transports: ['websocket'], upgrade: false, secure: true });
-    setSocket(socketInstance);
+    // Connect the shared singleton socket (autoConnect is false in lib/socket.js)
+    socket.connect();
 
-    socketInstance.on('connect', () => {
-      console.log('🔌 WebSocket is connected to SMS Server');
+    socket.on('connect', () => {
+      console.log('🔌 Socket connected to SMS Server:', socket.id);
+      // Register the user for targeted notifications once connected
+      const userId = Cookies.get('id');
+      if (userId) {
+        socket.emit('register_user', userId);
+      }
     });
 
-    const userId = Cookies.get('id');
-    if (userId) {
-      socketInstance.emit('register_user', userId);
-    }
+    socket.on('connect_error', (err) => {
+      console.warn('⚠️ Socket connection error:', err.message);
+    });
 
     // Listen for incoming visitor approval requests (For Residents)
-    socketInstance.on('visitor_approval_request', (data) => {
+    socket.on('visitor_approval_request', (data) => {
       console.log('🚨 Incoming walk-in visitor approval request:', data);
       setVisitorRequest(data);
       setCountdown(60); // Reset timer to 60s
     });
 
     // Listen for general notices
-    socketInstance.on('new_notice', (data) => {
+    socket.on('new_notice', (data) => {
       toast.success(`📢 Announcement: ${data.message}`, {
         duration: 8000,
         style: {
@@ -47,7 +49,7 @@ function App() {
     });
 
     // Listen for complaint updates
-    socketInstance.on('complaint_status_update', (data) => {
+    socket.on('complaint_status_update', (data) => {
       toast.success(`🔔 Status Update: ${data.message}`, {
         duration: 8000,
         style: {
@@ -60,7 +62,12 @@ function App() {
     });
 
     return () => {
-      socketInstance.disconnect();
+      // Remove listeners added here; do NOT disconnect — other pages share this singleton
+      socket.off('connect');
+      socket.off('connect_error');
+      socket.off('visitor_approval_request');
+      socket.off('new_notice');
+      socket.off('complaint_status_update');
     };
   }, []);
 

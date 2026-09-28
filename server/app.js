@@ -26,6 +26,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   'https://punitdevops.shop',
   'https://www.punitdevops.shop',
+  'http://localhost:3258',
   process.env.CLIENT_URL // Keeps support for your env variable if defined
 ].filter(Boolean); // Filters out undefined values if CLIENT_URL isn't set
 
@@ -44,6 +45,9 @@ const corsOptions = {
 
 const io = new Server(server, {
   cors: corsOptions,
+  // Allow both polling (for handshake) and websocket (for upgrade).
+  // This matches the client transports: ['polling', 'websocket'] setting.
+  transports: ['polling', 'websocket'],
 });
 
 app.use(express.json());
@@ -66,14 +70,20 @@ app.get('/health', (req, res) => {
   res.send('Health is ok.');
 });
 
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1', UserRoutes);
-app.use('/api/v1/roles', roleRoutes);
-app.use('/api/v1/flats', flatRoutes);
-app.use('/api/v1', visitorsRoutes);
-app.use('/api/v1/complaints', complaintRoutes);
-app.use('/api/v1/notices', noticeRoutes);
-app.use('/api/v1/bills', billRoutes);
+// Mount routes for both /api/v1 and /api prefixes
+const mountRoutes = (prefix) => {
+  app.use(`${prefix}/auth`, authRoutes);
+  app.use(`${prefix}`, UserRoutes);
+  app.use(`${prefix}/roles`, roleRoutes);
+  app.use(`${prefix}/flats`, flatRoutes);
+  app.use(`${prefix}`, visitorsRoutes);
+  app.use(`${prefix}/complaints`, complaintRoutes);
+  app.use(`${prefix}/notices`, noticeRoutes);
+  app.use(`${prefix}/bills`, billRoutes);
+};
+
+mountRoutes('/api/v1');
+mountRoutes('/api');
 
 // Initialize the real-time Notification Service
 notificationService.init(io);
@@ -85,6 +95,6 @@ app.on('connection', () => {
   console.log('connected');
 });
 
-server.listen(3000, () => {
-  console.log('server is running');
+server.listen(process.env.PORT || 9007, () => {
+  console.log(`server is running on port ${process.env.PORT || 9007}`);
 });

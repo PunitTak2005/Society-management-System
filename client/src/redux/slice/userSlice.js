@@ -18,7 +18,7 @@ export const fetchUsers = createAsyncThunk(
       });
       return response.data;
     } catch (error) {
-      return thunkApi.rejectWithValue(error.response?.data || error.message);
+      return thunkApi.rejectWithValue(error.response?.data || { message: error.message || 'Failed to fetch users' });
     }
   }
 );

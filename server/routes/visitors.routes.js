@@ -19,7 +19,7 @@ router.get('/visitors/email-action', emailActionHandler);
 router.get(
   '/visitors',
   verifyToken,
-  checkRole(['admin', 'security_guard', 'staff']),
+  checkRole(['admin', 'resident', 'security_guard', 'staff']),
   getVisitors
 );
 

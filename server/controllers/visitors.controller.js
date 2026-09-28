@@ -124,14 +124,15 @@ export const verifyPasscode = async (req, res) => {
 // Triggers the fallback JWT signed email links
 const triggerEmailFallback = async (visitor, resident) => {
   try {
-    const JWT_SECRET = process.env.JWT_SECRET_STRING || '4d0092e0853f1e8aa67ee8546275c787a13adbfdc8f178762649d1e0751ae070';
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.JWT_SECRET_STRING || '4d0092e0853f1e8aa67ee8546275c787a13adbfdc8f178762649d1e0751ae070';
     
     // Generate secure tokens expiring in 5 mins
     const tokenApprove = jwt.sign({ visitorId: visitor._id, action: 'accepted' }, JWT_SECRET, { expiresIn: '5m' });
     const tokenReject = jwt.sign({ visitorId: visitor._id, action: 'rejected' }, JWT_SECRET, { expiresIn: '5m' });
 
-    const approveLink = `http://localhost:3000/api/v1/visitors/email-action?token=${tokenApprove}`;
-    const rejectLink = `http://localhost:3000/api/v1/visitors/email-action?token=${tokenReject}`;
+    const BASE_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 9007}`;
+    const approveLink = `${BASE_URL}/api/v1/visitors/email-action?token=${tokenApprove}`;
+    const rejectLink = `${BASE_URL}/api/v1/visitors/email-action?token=${tokenReject}`;
 
     const mailOptions = {
       from: process.env.SMTP_USER,
@@ -287,7 +288,7 @@ export const emailActionHandler = async (req, res) => {
       `);
     }
 
-    const JWT_SECRET = process.env.JWT_SECRET_STRING || '4d0092e0853f1e8aa67ee8546275c787a13adbfdc8f178762649d1e0751ae070';
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.JWT_SECRET_STRING || '4d0092e0853f1e8aa67ee8546275c787a13adbfdc8f178762649d1e0751ae070';
     let decoded;
 
     try {
@@ -354,14 +355,31 @@ export const emailActionHandler = async (req, res) => {
 // GET ALL VISITOR LOGS
 export const getVisitors = async (req, res) => {
   try {
+    let baseQuery = Visitor.find();
+
+    // If user is a resident, filter by their assigned flat or visitors registered by them
+    if (req.user && req.user.role === 'resident') {
+      const user = await User.findById(req.user.id);
+      if (user && user.flat) {
+        baseQuery = Visitor.find({
+          $or: [
+            { flat: user.flat },
+            { registeredBy: req.user.id }
+          ]
+        });
+      } else {
+        baseQuery = Visitor.find({ registeredBy: req.user.id });
+      }
+    }
+
     // Count matches for metadata
-    const countFeatures = new APIFeatures(Visitor.find(), req.query)
+    const countFeatures = new APIFeatures(baseQuery.clone(), req.query)
       .filter()
       .search(['name', 'type', 'purpose']);
     const totalResults = await countFeatures.query.countDocuments();
 
     // Query features
-    const features = new APIFeatures(Visitor.find(), req.query)
+    const features = new APIFeatures(baseQuery, req.query)
       .filter()
       .search(['name', 'type', 'purpose'])
       .sort()
@@ -375,6 +393,7 @@ export const getVisitors = async (req, res) => {
     const limit = Number(req.query.limit) || 10;
 
     res.status(200).json({
+      success: true,
       message: 'success',
       totalResults,
       totalPages: Math.ceil(totalResults / limit),
@@ -383,6 +402,6 @@ export const getVisitors = async (req, res) => {
       data: visitors,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 };

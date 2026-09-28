@@ -6,6 +6,7 @@ const initialState = {
   loading: false,
   message: null,
   isAuthenticated: Cookies.get('isAuthenticated') || null,
+  id: Cookies.get('id') || null,
   name: Cookies.get('name') || null,
   email: Cookies.get('email') || null,
   role:  Cookies.get('role') || null,
@@ -17,7 +18,7 @@ export const login = createAsyncThunk(
   '/auth_login',
   async ({ formData }, thunkApi) => {
     try {
-      console.log(formData);
+      console.log('Login payload:', formData);
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/auth/login`,
         formData,
@@ -26,11 +27,30 @@ export const login = createAsyncThunk(
         }
       );
 
-      console.log(res.data);
+      console.log('Login response:', res.data);
       return res.data;
     } catch (error) {
-      console.log(error.response.data);
-      return thunkApi.rejectWithValue(error.response.data);
+      console.log('Login error response:', error.response?.data);
+      return thunkApi.rejectWithValue(error.response?.data || { message: 'Login failed' });
+    }
+  }
+);
+
+export const resendOtp = createAsyncThunk(
+  '/auth_resendOtp',
+  async ({ email }, thunkApi) => {
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/auth/resendotp`,
+        { email },
+        {
+          withCredentials: true,
+        }
+      );
+      return res.data;
+    } catch (error) {
+      console.log('Resend OTP error:', error.response?.data);
+      return thunkApi.rejectWithValue(error.response?.data || { message: 'Failed to resend OTP' });
     }
   }
 );
@@ -140,6 +160,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = action.payload.authenticated;
         const { name, email, role, id, profilePhoto } = action.payload.data;
+        state.id = id;
         state.name = name;
         state.role = role;
         state.email = email;
@@ -168,6 +189,7 @@ const authSlice = createSlice({
         console.log(action.payload);
         state.isAuthenticated = action.payload.authenticated;
         Cookies.remove('isAuthenticated');
+        state.id = null;
         state.name = null;
         state.email = null;
         state.role = null;

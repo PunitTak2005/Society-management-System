@@ -3,6 +3,7 @@ import {
   deactivateUser,
   getAllUser,
   getSingleUser,
+  getSelfProfile,
   updateUser,
   updateProfilePhoto,
   updateSelfProfile,
@@ -15,7 +16,8 @@ import upload from '../middleware/upload.js';
 const router = express.Router();
 
 router.get('/users', verifyToken, checkRole(['admin']), getAllUser);
-router.get('/users/:id', verifyToken, checkRole(['admin']), getSingleUser);
+router.get('/users/:id', verifyToken, getSingleUser);
+router.get('/profile', verifyToken, getSelfProfile);
 router.patch('/users/:id/deactivate', verifyToken, checkRole(['admin']), deactivateUser);
 router.patch('/users/:id', verifyToken, checkRole(['admin']), updateUser);
 router.patch('/users/:id/profile-photo', verifyToken, upload.single('profilePhoto'), updateProfilePhoto);

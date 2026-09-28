@@ -28,6 +28,7 @@ export const getAllUser = async (req, res) => {
     const limit = Number(req.query.limit) || 10;
 
     res.status(200).json({
+      success: true,
       message: 'success',
       totalResults,
       totalPages: Math.ceil(totalResults / limit),
@@ -37,6 +38,7 @@ export const getAllUser = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       error: error.message,
     });
   }
@@ -69,18 +71,64 @@ export const deactivateUser = async (req, res) => {
 export const getSingleUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findById(id).populate('role').populate('flat');
+
+    // Authorization: User can view their own profile, or admin can view any profile
+    const isOwner = req.user && req.user.id && req.user.id.toString() === id.toString();
+    const isAdmin = req.user && req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: You are not authorized to view this profile.',
+      });
+    }
+
+    const user = await User.findById(id)
+      .populate('role')
+      .populate('flat')
+      .select('-password');
+
     if (!user) {
       return res.status(404).json({
+        success: false,
         message: 'User not found',
       });
     }
     res.status(200).json({
+      success: true,
       message: 'success',
       data: user,
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const getSelfProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate('role')
+      .populate('flat')
+      .select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'success',
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
       error: error.message,
     });
   }
