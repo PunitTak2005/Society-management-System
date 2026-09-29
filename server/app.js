@@ -20,6 +20,8 @@ import notificationService from './lib/notificationService.js';
 import { initPrivacyWorker } from './lib/privacyCleanup.js';
 
 const app = express();
+app.set('trust proxy', 1); // Trust HAProxy reverse proxy
+
 const server = http.createServer(app);
 
 // Allowed origins for CORS (Express & Socket.io)
@@ -27,6 +29,7 @@ const allowedOrigins = [
   'https://punitdevops.shop',
   'https://www.punitdevops.shop',
   'http://localhost:3258',
+  'http://localhost:5173',
   process.env.CLIENT_URL // Keeps support for your env variable if defined
 ].filter(Boolean); // Filters out undefined values if CLIENT_URL isn't set
 
@@ -44,10 +47,12 @@ const corsOptions = {
 };
 
 const io = new Server(server, {
-  cors: corsOptions,
-  // Allow both polling (for handshake) and websocket (for upgrade).
-  // This matches the client transports: ['polling', 'websocket'] setting.
-  transports: ['polling', 'websocket'],
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  path: "/socket.io/"
 });
 
 app.use(express.json());
