@@ -52,7 +52,8 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  path: "/socket.io/"
+  path: "/socket.io/",
+  transports: ["websocket", "polling"]
 });
 
 app.use(express.json());
